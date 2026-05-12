@@ -81,15 +81,20 @@ class TextMerger:
             bv_id = "merged_text"
             output_path = self.output_dir / f"{bv_id}.txt"
 
+        result_file = None
         if output_path and result_text:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             output_path.write_text(result_text, encoding="utf-8")
             logger.info(f"合并结果已保存: {output_path}")
+            result_file = str(output_path)
+        elif source == "none":
+            logger.error("字幕和转录文本均为空，无法生成总结")
+            raise ValueError("字幕和转录文本均为空，无法继续处理。请确保视频有字幕，或安装 FFmpeg 后使用 Whisper 转录。")
 
         return {
             "text": result_text,
             "source": source,
-            "file": output_path,
+            "file": result_file,
         }
 
     def _deduplicate(self, text: str) -> str:

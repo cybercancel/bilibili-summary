@@ -1,4 +1,5 @@
-# B站视频总结系统 v2.0 配置文件
+# B站视频总结系统 v2.0 配置文件模板
+# 复制此文件为 config.yaml 并填写你的配置
 
 # 下载设置
 download:
@@ -23,7 +24,7 @@ subtitle:
 # 转录设置
 transcribe:
   output_dir: "transcripts"
-  model: "base"         # tiny/base/small/medium
+  model: "base"         # tiny/base/small/medium/large
   device: "auto"        # auto/cuda/cpu
   language: "zh"
   compute_type: "float16"  # float16/int8_float16/int8
@@ -37,7 +38,7 @@ merge:
 # LLM总结
 llm:
   model_name: "deepseek-chat"
-  api_key: ${DEEPSEEK_API_KEY}        # 从环境变量 DEEPSEEK_API_KEY 读取，或在此处填写
+  api_key: ${DEEPSEEK_API_KEY}  # 从环境变量 DEEPSEEK_API_KEY 读取，或在此处填写
   base_url: "https://api.deepseek.com"
   max_tokens: 4096
   temperature: 0.3

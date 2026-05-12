@@ -349,7 +349,9 @@ class BilibiliVideoProcessor:
         url = status["url"]
 
         # 读取合并后的文本
-        merge_file = Path(status["steps"]["merge"]["file"])
+        merge_file = status["steps"]["merge"].get("file")
+        if not merge_file or not Path(merge_file).exists():
+            raise ValueError("合并文件不存在，无法生成总结")
         with open(merge_file, "r", encoding="utf-8") as f:
             text = f.read()
 

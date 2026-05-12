@@ -392,7 +392,7 @@ class BilibiliBatchProcessor:
         output_dir = Path(self.config.get("merge", {}).get("output_dir", "merged"))
         output_path = output_dir / f"{bv_id}_merged.txt"
         result = self.merger.merge(subtitle_text, whisper_text, output_path)
-        status["steps"]["merge"] = {"status": "done", "file": str(result["file"]), "source": result["source"]}
+        status["steps"]["merge"] = {"status": "done", "file": result.get("file"), "source": result["source"]}
         status["current_step"] = "summarize"
         return status
 
@@ -403,7 +403,9 @@ class BilibiliBatchProcessor:
         bv_id = status["bv_id"]
         title = status["title"]
         url = status["url"]
-        merge_file = Path(status["steps"]["merge"]["file"])
+        merge_file = status["steps"]["merge"].get("file")
+        if not merge_file or not Path(merge_file).exists():
+            raise ValueError("合并文件不存在，无法生成总结")
         with open(merge_file, "r", encoding="utf-8") as f:
             text = f.read()
         output_dir = Path(self.config.get("output", {}).get("summary_dir", "summaries"))

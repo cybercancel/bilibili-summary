@@ -1,108 +1,247 @@
-# bilibili-summary
-一个用于自动爬取并总结 B 站视频内容的工具，支持自动生成 Markdown 笔记。
-整个流程分 3 步：装依赖 → 填配置 → 跑起来。
+# B站视频总结系统 v2.0
 
-第一步：安装依赖
-打开终端，进入项目目录，执行：
+[![Python Version](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-bash
-复制
-cd C:\Users\22508\WorkBuddy\2026-05-12-task-9\bilibili-summary
+一个自动化的 B站视频内容总结工具，支持视频下载、字幕提取、语音转录和 AI 智能总结。
 
-# 核心依赖（必须装）
-pip install yt-dlp curl_cffi pyyaml requests openai tqdm
+---
 
-# Whisper 转录（可选，没有字幕时才需要）
-pip install faster-whisper
+## ✨ 功能特性
 
-# 如果你有 NVIDIA 显卡想加速转录
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu121
-最小可用：只装 pip install yt-dlp curl_cffi pyyaml requests openai tqdm 就行。Whisper 和 PyTorch 只在没有字幕的视频才用到，可以后面按需装。
+- **多源字幕获取**：B站 API 字幕 → yt-dlp 下载字幕 → faster-whisper 语音转录（三级降级）
+- **GPU 加速**：支持 NVIDIA GPU 加速转录（需安装 PyTorch CUDA 版本）
+- **批量处理**：通过配置文件批量处理多个视频
+- **断点续传**：支持中断后继续处理，避免重复工作
+- **智能分块**：长文本自动分块，适配 API 长度限制
+- **多种通知**：支持 Webhook、邮件等多种完成通知方式
 
-第二步：配置 DeepSeek API Key
-你有两种方式提供 API Key：
+---
 
-方式 A — 环境变量（推荐）
+## 📦 安装
 
-bash
-复制
-# 临时生效（当前终端窗口）
-set DEEPSEEK_API_KEY=sk-xxxxxxxxxxxxxxxxxxxxxxxx
+### 1. 克隆仓库
 
-# 永久生效（加到系统环境变量，重启终端生效）
-setx DEEPSEEK_API_KEY "sk-xxxxxxxxxxxxxxxxxxxxxxxx"
-方式 B — 直接写配置文件
+```bash
+git clone https://github.com/yourusername/bilibili-summary.git
+cd bilibili-summary
+```
 
-编辑 config.yaml，把 api_key: null 改成你的 Key：
+### 2. 安装依赖
 
-yaml
-复制
+```bash
+pip install -r requirements.txt
+```
+
+### 3. 安装 FFmpeg
+
+**Windows**:
+1. 下载 FFmpeg：https://ffmpeg.org/download.html
+2. 解压到任意目录（如 `C:\ffmpeg`）
+3. 将 `C:\ffmpeg\bin` 添加到系统 PATH
+
+**macOS**:
+```bash
+brew install ffmpeg
+```
+
+**Linux**:
+```bash
+sudo apt update
+sudo apt install ffmpeg
+```
+
+### 4. 配置
+
+复制配置模板并填写：
+
+```bash
+cp config.example.yaml config.yaml
+```
+
+编辑 `config.yaml`：
+- 填写 DeepSeek API Key（[获取地址](https://platform.deepseek.com/)）
+- 根据需要调整其他配置
+
+---
+
+## 🚀 使用方法
+
+### 单视频处理
+
+```bash
+python main.py
+```
+
+按提示输入 B站视频 BV 号（如 `BV1xx411c7mD`）
+
+### 批量处理
+
+1. 编辑 `batch_config.yaml` 配置要处理的视频列表
+2. 运行：
+
+```bash
+python batch_process.py
+```
+
+---
+
+## ⚙️ 配置说明
+
+###DeepSeek API Key
+
+在 `config.yaml` 中配置：
+
+```yaml
 llm:
-  model_name: "deepseek-chat"
-  api_key: "sk-xxxxxxxxxxxxxxxxxxxxxxxx"  # ← 填这里
-  base_url: "https://api.deepseek.com"
-第三步：运行
-单视频处理
-bash
-复制
-python main.py --url "https://www.bilibili.com/video/BV1xxxxxxxxx"
-处理完成后，总结文件会输出到 summaries/ 目录下，格式为 BV号_summary.md。
+  api_key: "sk-your-key-here"  # 或直接填写 API Key
+  # 或使用环境变量
+  api_key: ${DEEPSEEK_API_KEY}
+```
 
-常用参数
-bash
-复制
-# 指定自定义配置文件
-python main.py --url "https://www.bilibili.com/video/BVxxxxx" --config my_config.yaml
+设置环境变量（推荐）：
 
-# 强制用 CPU 转录（默认 auto，有显卡用显卡）
-python main.py --url "https://www.bilibili.com/video/BVxxxxx" --device cpu
+```bash
+# Linux/macOS
+export DEEPSEEK_API_KEY="sk-your-key-here"
 
-# 选 Whisper 模型大小（base 速度/质量平衡，small 更准但更慢）
-python main.py --url "https://www.bilibili.com/video/BVxxxxx" --whisper small
+# Windows PowerShell
+$env:DEEPSEEK_API_KEY="sk-your-key-here"
+```
 
-# 关闭断点续传（从头处理）
-python main.py --url "https://www.bilibili.com/video/BVxxxxx" --no-resume
+### Whisper 模型选择
 
-# 开启详细日志（调试用）
-python main.py --url "https://www.bilibili.com/video/BVxxxxx" --verbose
-批量处理
-创建一个 urls.txt 文件，每行一个视频链接（# 开头是注释，会被忽略）：
-# 示例视频列表
-https://www.bilibili.com/video/BV1xxxxxxx
-https://www.bilibili.com/video/BV2xxxxxxx
-https://www.bilibili.com/video/BV3xxxxxxx
-运行：
-bash
-复制
-python batch_process.py -f urls.txt
-批量处理也支持 --whisper、--device、--no-resume、--verbose 等参数，还额外有：
+在 `config.yaml` 中设置 `transcribe.model`：
 
-bash
-复制
-# 限制最多处理 5 个视频
-python batch_process.py -f urls.txt --max-videos 5
+| 模型 | 大小 | 速度 | 精度 | 推荐场景 |
+|------|------|------|------|----------|
+| tiny | 75 MB | ⭐⭐⭐⭐⭐ | ⭐ | 快速测试 |
+| base | 140 MB | ⭐⭐⭐⭐ | ⭐⭐ | 日常使用（推荐）|
+| small | 460 MB | ⭐⭐⭐ | ⭐⭐⭐ | 较高精度 |
+| medium | 1.5 GB | ⭐⭐ | ⭐⭐⭐⭐ | 高精度 |
+| large | 3.0 GB | ⭐ | ⭐⭐⭐⭐⭐ | 最高精度 |
 
-# 视频之间间隔 10 秒（避免请求太频繁）
-python batch_process.py -f urls.txt --delay 10
+### GPU 加速
 
-# 遇到错误继续处理（不停下来）
-# 默认就是继续，所以不需要额外设置
-config.yaml 各项说明速查
-配置项	说明	建议值
-download.impersonate	伪装浏览器绕反爬	"chrome"（别改）
-download.cookies_browser	从浏览器提取 cookies	"chrome" 或 "edge"（遇到登录视频时有用）
-subtitle.auto_fallback	字幕提取失败自动降级到 Whisper	true（推荐）
-transcribe.model	Whisper 模型	base（平衡）/ small（更准）
-transcribe.device	运行设备	auto（自动选）
-llm.model_name	DeepSeek 模型	deepseek-chat
-llm.temperature	创造性（越低越保守）	0.3（总结用低值）
-llm.chunk.max_chars	分块大小	6000（一般不用改）
-resume.enabled	断点续传	true（推荐）
-常见问题
-Q: 下载报 412 错误？ → 确保 curl_cffi 已安装，且 config.yaml 里 impersonate: "chrome" 没被改掉。
+安装 PyTorch CUDA 版本以启用 GPU 加速：
 
-Q: 下载报 403 / 需要登录？ → 设置 download.cookies_browser: "chrome"，程序会自动读取你 Chrome 的登录 cookies。
+```bash
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu124
+```
 
-Q: 不想装 Whisper，只靠字幕？ → 不装 faster-whisper 就行，程序在字幕提取失败时会跳过转录步骤（但可能无法总结纯口述无字幕的视频）。
+验证安装：
 
-Q: 想看看处理到哪一步了？ → 查看 summaries/BV号.status.json 文件，里面记录了每一步的状态。或者加 --verbose 开详细日志。
+```bash
+python -c "import torch; print(torch.cuda.is_available())"
+# 输出: True
+```
+
+详见 `PYTORCH_CUDA安装指导.md`（中文）
+
+---
+
+## 📁 项目结构
+
+```
+bilibili-summary/
+├── main.py                    # 主程序入口
+├── batch_process.py           # 批量处理入口
+├── config.yaml                # 配置文件（需自行创建）
+├── config.example.yaml        # 配置模板
+├── requirements.txt           # 依赖清单
+│
+├── core/                     # 核心模块
+│   ├── downloader.py         # 视频/字幕下载
+│   ├── subtitle.py           # B站字幕API
+│   ├── transcriber.py        # Whisper 语音转录
+│   ├── chunker.py            # 文本分块
+│   ├── merger.py             # 文本合并
+│   ├── summarizer.py         # AI 摘要生成
+│   └── notifier.py          # 完成通知
+│
+├── videos/                   # 下载的视频（gitignore）
+├── subtitles/               # 下载的字幕（gitignore）
+├── transcripts/              # 转录文本（gitignore）
+├── merged/                   # 合并文本（gitignore）
+├── summaries/                # 最终摘要（gitignore）
+└── logs/                     # 运行日志（gitignore）
+```
+
+---
+
+## 🔧 工作原理
+
+```
+BV号输入
+   ↓
+[下载视频/字幕] → videos/*.m4a, subtitles/*.srt
+   ↓
+[获取字幕] → subtitle.py (B站API)
+   ↓ (失败)
+[语音转录] → transcriber.py (faster-whisper)
+   ↓
+[文本合并] → merger.py
+   ↓
+[AI 总结] → summarizer.py (DeepSeek API)
+   ↓
+[保存摘要] → summaries/*.md
+```
+
+---
+
+## 📝 输出示例
+
+生成的摘要文件（`summaries/BVxxx_summary.md`）包含：
+
+- 视频标题
+- 内容总结
+- 关键要点
+- 详细内容展开
+
+---
+
+## 🐛 常见问题
+
+### Q1: `FFmpeg 未找到`
+
+**解决**：安装 FFmpeg 并添加到 PATH（见上方安装步骤）
+
+### Q2: `ModuleNotFoundError: No module named 'torch'`
+
+**说明**：正常，PyTorch 仅用于 GPU 加速，CPU 模式不需要
+
+### Q3: 转录速度太慢
+
+**解决**：
+1. 安装 PyTorch CUDA 版本启用 GPU 加速
+2. 使用更小的 Whisper 模型（`tiny` 或 `base`）
+
+### Q4: `nvidia-smi` 报错
+
+**说明**：远程桌面会话中会阻断 NVML 访问，但不影响使用
+**验证**：直接测试 `python -c "import torch; print(torch.cuda.is_available())"`
+
+---
+
+## 📄 许可证
+
+MIT License. 详见 [LICENSE](LICENSE) 文件。
+
+---
+
+## 🙏 致谢
+
+- [yt-dlp](https://github.com/yt-dlp/yt-dlp) - 视频下载
+- [faster-whisper](https://github.com/guillaumekln/faster-whisper) - 语音转录
+- [DeepSeek](https://www.deepseek.com/) - AI 总结
+- [PyTorch](https://pytorch.org/) - GPU 加速
+
+---
+
+## 📧 联系方式
+
+如有问题或建议，欢迎提交 Issue 或 Pull Request！
+
+---
+
+**⭐ 如果这个项目对你有帮助，欢迎 Star！**

@@ -44,8 +44,12 @@ class Transcriber:
 
             # 确定设备
             if self.device == "auto":
-                import torch
-                device = "cuda" if torch.cuda.is_available() else "cpu"
+                try:
+                    import torch
+                    device = "cuda" if torch.cuda.is_available() else "cpu"
+                except ImportError:
+                    logger.info("torch 未安装，默认使用 CPU")
+                    device = "cpu"
             else:
                 device = self.device
 
@@ -78,9 +82,12 @@ class Transcriber:
         if self._model is not None:
             del self._model
             self._model = None
-            import torch
-            if torch.cuda.is_available():
-                torch.cuda.empty_cache()
+            try:
+                import torch
+                if torch.cuda.is_available():
+                    torch.cuda.empty_cache()
+            except ImportError:
+                pass
             logger.info("模型已释放")
 
     def transcribe(self, audio_path: Path, output_path: Optional[Path] = None) -> dict:
