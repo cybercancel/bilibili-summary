@@ -61,8 +61,10 @@ cp config.example.yaml config.yaml
 
 编辑 `config.yaml`：
 - 填写 DeepSeek API Key（[获取地址](https://platform.deepseek.com/)）
+- 填写sessdata
 - 根据需要调整其他配置
 
+详见配置说明
 ---
 
 ## 🚀 使用方法
@@ -70,27 +72,43 @@ cp config.example.yaml config.yaml
 ### 单视频处理
 
 ```bash
-python main.py
+python main.py --url "https://www.bilibili.com/video/BV19sxxxxUP"
 ```
 
-按提示输入 B站视频 BV 号（如 `BV1xx411c7mD`）
+按提示输入 B站视频 BV 号（如 `BV1xx4xxx7mD`）
 
-### 批量处理
-
-1. 编辑 `batch_config.yaml` 配置要处理的视频列表
-2. 运行：
-
+## 图形化界面（支持单视频和批量视频）
 ```bash
-python batch_process.py
+python gui.py
+python gui.py --config custom_config.yaml
 ```
+支持在各种格式的链接里提取b站视频链接
 
+但是可能会因为未知原因发生难以复现的错误（传回其他视频的字幕）
+
+请尽量使用标准链接
 ---
 
 ## ⚙️ 配置说明
 
-###DeepSeek API Key
+### DeepSeek API Key
 
 在 `config.yaml` 中配置：
+
+在已登录的bilibili中获取sessdata登陆凭证
+
+按f12打开操作台
+
+找到顶部“应用程序”后在左边栏找到”cookie“
+
+打开bilibili的cookie后可获取自己的sessdata
+
+双击“SESSDATA”右侧值复制粘贴即可
+```yaml
+download:
+    sessdata: 
+  
+```
 
 ```yaml
 llm:

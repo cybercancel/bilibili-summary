@@ -94,12 +94,18 @@ class BilibiliVideoProcessor:
         处理单个视频
 
         Args:
-            url: 视频URL
+            url: 视频URL（支持带标题等前缀文本，会自动提取干净URL）
             resume: 是否启用断点续传
 
         Returns:
             处理结果字典
         """
+        # 从输入中提取干净的 B站 URL
+        from core.subtitle import extract_bilibili_url
+        clean_url = extract_bilibili_url(url)
+        if not clean_url:
+            raise ValueError(f"无法从输入中提取B站链接: {url}")
+        url = clean_url
         start_time = time.time()
         logging.info("=" * 60)
         logging.info(f"开始处理视频: {url}")
@@ -256,18 +262,25 @@ class BilibiliVideoProcessor:
         status["current_step"] = "transcribe"
         status["updated_at"] = datetime.now().isoformat()
 
-        # 检查是否需要降级到Whisper
-        if result.get("source") == "fallback_whisper":
+        # 根据字幕结果决定是否需要转录
+        if result.get("available") and result.get("text"):
+            # 字幕提取成功且有内容 → 跳过转录
+            status["steps"]["transcribe"] = {
+                "status": "skipped",
+                "file": None,
+                "reason": "subtitle extracted successfully",
+            }
+        elif result.get("source") == "fallback_whisper":
             status["steps"]["transcribe"] = {
                 "status": "pending",
                 "file": None,
                 "reason": "subtitle fallback",
             }
-        elif not result.get("available") and not self.config.get("subtitle", {}).get("auto_fallback"):
+        elif not self.config.get("subtitle", {}).get("auto_fallback"):
             status["steps"]["transcribe"] = {
                 "status": "skipped",
                 "file": None,
-                "reason": "subtitle available but empty",
+                "reason": "subtitle not available and auto_fallback disabled",
             }
 
         return status
@@ -312,8 +325,16 @@ class BilibiliVideoProcessor:
         subtitle_text = ""
         subtitle_file = status["steps"]["subtitle"].get("file")
         if subtitle_file and Path(subtitle_file).exists():
-            with open(subtitle_file, "r", encoding="utf-8") as f:
-                subtitle_text = f.read()
+            # 优先读取纯文本 .txt 文件（按 bv_id 命名）
+            subtitle_dir = Path(self.config.get("subtitle", {}).get("output_dir", "subtitles"))
+            txt_file = subtitle_dir / f"{bv_id}.txt"
+            if txt_file.exists():
+                with open(txt_file, "r", encoding="utf-8") as f:
+                    subtitle_text = f.read()
+            else:
+                # 兜底：读取原始字幕文件
+                with open(subtitle_file, "r", encoding="utf-8") as f:
+                    subtitle_text = f.read()
 
         # 获取转录文本
         whisper_text = ""

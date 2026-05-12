@@ -113,9 +113,19 @@ class BilibiliBatchProcessor:
             raise FileNotFoundError(f"URL文件不存在: {url_file}")
 
         with open(url_path, "r", encoding="utf-8") as f:
-            urls = [line.strip() for line in f if line.strip() and not line.startswith("#")]
+            raw_lines = [line.strip() for line in f if line.strip() and not line.startswith("#")]
 
-        logging.info(f"从文件加载了 {len(urls)} 个URL")
+        # 从每行文本中提取干净的 B站 URL
+        from core.subtitle import extract_bilibili_url
+        urls = []
+        for line in raw_lines:
+            clean_url = extract_bilibili_url(line)
+            if clean_url:
+                urls.append(clean_url)
+            else:
+                logging.warning(f"跳过无法解析的行: {line}")
+
+        logging.info(f"从文件加载了 {len(urls)} 个有效URL")
         return urls
 
     def process_batch(self, urls: list[str], resume: bool = True) -> dict:
@@ -357,7 +367,10 @@ class BilibiliBatchProcessor:
             "available": result.get("available", False),
         }
         status["current_step"] = "transcribe"
-        if result.get("source") == "fallback_whisper":
+        # 字幕提取成功且有内容 → 跳过转录
+        if result.get("available") and result.get("text"):
+            status["steps"]["transcribe"] = {"status": "skipped", "file": None, "reason": "subtitle extracted successfully"}
+        elif result.get("source") == "fallback_whisper":
             status["steps"]["transcribe"] = {"status": "pending", "file": None, "reason": "subtitle fallback"}
         return status
 
@@ -379,11 +392,18 @@ class BilibiliBatchProcessor:
     def _step_merge(self, status: dict) -> dict:
         logging.info("[Step 4/5] 合并文本...")
         bv_id = status["bv_id"]
+        # 获取字幕文本（优先读取纯文本 .txt 文件）
         subtitle_text = ""
         subtitle_file = status["steps"]["subtitle"].get("file")
-        if subtitle_file and Path(subtitle_file).exists():
-            with open(subtitle_file, "r", encoding="utf-8") as f:
-                subtitle_text = f.read()
+        if subtitle_file:
+            subtitle_dir = Path(self.config.get("subtitle", {}).get("output_dir", "subtitles"))
+            txt_file = subtitle_dir / f"{bv_id}.txt"
+            if txt_file.exists():
+                with open(txt_file, "r", encoding="utf-8") as f:
+                    subtitle_text = f.read()
+            elif Path(subtitle_file).exists():
+                with open(subtitle_file, "r", encoding="utf-8") as f:
+                    subtitle_text = f.read()
         whisper_text = ""
         whisper_file = status["steps"]["transcribe"].get("file")
         if whisper_file and Path(whisper_file).exists():

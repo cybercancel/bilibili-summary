@@ -1,0 +1,3 @@
+GUI init OK
+Steps: ['download', 'subtitle', 'transcribe', 'merge', 'summarize']
+ALL OK
