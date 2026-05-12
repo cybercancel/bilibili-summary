@@ -1,0 +1,14 @@
+# 批量处理配置
+input:
+  url_file: "urls.txt"       # URL列表文件，每行一个
+  delay_between: 5           # 视频之间间隔（秒）
+  max_videos: null           # 最大处理数（null=不限）
+  stop_on_error: false       # 单个视频失败是否终止
+
+output:
+  batch_summary: true        # 生成汇总报告
+  progress_file: null        # 进度文件路径
+
+resume:
+  enabled: true              # 启用断点续传
+  skip_done: true            # 跳过已完成的视频
