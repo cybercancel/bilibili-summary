@@ -6,7 +6,9 @@
 
 import logging
 import subprocess
+import sys
 import tempfile
+import time
 from pathlib import Path
 from typing import Optional
 
@@ -127,6 +129,10 @@ class Transcriber:
             all_segments = []
             full_text = []
 
+            total_duration = info.duration if hasattr(info, "duration") else 0
+            last_progress = -1
+            start_time = time.time()
+
             for segment in segments:
                 text = segment.text.strip()
                 start = segment.start
@@ -137,6 +143,27 @@ class Transcriber:
                     "text": text,
                 })
                 full_text.append(text)
+
+                # 更新进度条
+                if total_duration > 0:
+                    progress = min(int((end / total_duration) * 100), 100)
+                    if progress > last_progress:
+                        last_progress = progress
+                        elapsed = time.time() - start_time
+                        eta = (elapsed / end * (total_duration - end)) if end > 0 else 0
+                        bar_len = 30
+                        filled = int(bar_len * progress / 100)
+                        bar = "█" * filled + "░" * (bar_len - filled)
+                        sys.stdout.write(
+                            f"\r  Whisper: [{bar}] {progress:3d}% "
+                            f"| {format_time(elapsed)} elapsed | ETA {format_time(eta)}  "
+                        )
+                        sys.stdout.flush()
+
+            # 打印换行结束进度条
+            if total_duration > 0:
+                sys.stdout.write("\n")
+                sys.stdout.flush()
 
             result_text = " ".join(full_text)
 
@@ -239,3 +266,10 @@ class Transcriber:
     def __del__(self):
         """析构时释放模型"""
         self._release_model()
+
+
+def format_time(seconds: float) -> str:
+    """格式化秒数为 mm:ss 字符串"""
+    seconds = max(0, int(seconds))
+    minutes, secs = divmod(seconds, 60)
+    return f"{minutes:02d}:{secs:02d}"
