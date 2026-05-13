@@ -282,6 +282,7 @@ class BilibiliSummaryGUI:
             side=tk.LEFT, padx=(0, 10)
         )
         ttk.Button(opt_frame, text="清空日志", command=self.clear_log).pack(side=tk.LEFT)
+        ttk.Button(opt_frame, text="⚙ 设置", command=self._open_settings_dialog).pack(side=tk.LEFT, padx=(8, 0))
 
         # Notebook: 单个 / 批量
         self.notebook = ttk.Notebook(bar)
@@ -782,6 +783,209 @@ class BilibiliSummaryGUI:
             self._update_step(key, "pending")
         self.time_label.configure(text="耗时: --")
         self.batch_info_label.configure(text="")
+
+    # ────────────────────────────────────────────
+    #  设置对话框
+    # ────────────────────────────────────────────
+
+    def _open_settings_dialog(self):
+        """打开设置对话框（修改 API Key / SESSDATA 等）"""
+        dlg = tk.Toplevel(self.root)
+        dlg.title("设置")
+        dlg.resizable(False, False)
+        dlg.configure(bg="#1e1e2e")
+        dlg.grab_set()  # 模态
+
+        BG = "#1e1e2e"
+        CARD = "#313244"
+        FG = "#cdd6f4"
+        ACCENT = "#89b4fa"
+        ENTRY_BG = "#45475a"
+        ENTRY_FG = "#cdd6f4"
+        FONT = ("Microsoft YaHei UI", 10)
+        FONT_BOLD = ("Microsoft YaHei UI", 10, "bold")
+        MONO = ("Consolas", 10)
+
+        # ── 读取当前值 ──
+        cur_apikey = self.config.get("llm", {}).get("api_key", "") or ""
+        cur_sessdata = self.config.get("download", {}).get("sessdata", "") or ""
+
+        # ── 整体 padding ──
+        outer = tk.Frame(dlg, bg=BG, padx=20, pady=16)
+        outer.pack(fill=tk.BOTH, expand=True)
+
+        # ── 标题 ──
+        tk.Label(outer, text="⚙  配置设置", bg=BG, fg=ACCENT,
+                 font=("Microsoft YaHei UI", 13, "bold")).pack(anchor=tk.W, pady=(0, 12))
+
+        # ──────────────────────────────────────────
+        # 卡片：DeepSeek API Key
+        # ──────────────────────────────────────────
+        card1 = tk.Frame(outer, bg=CARD, bd=0, relief=tk.FLAT, padx=14, pady=12)
+        card1.pack(fill=tk.X, pady=(0, 10))
+
+        tk.Label(card1, text="DeepSeek API Key", bg=CARD, fg=ACCENT,
+                 font=FONT_BOLD).pack(anchor=tk.W)
+        tk.Label(card1,
+                 text="用于调用 DeepSeek AI 生成视频摘要。可在 platform.deepseek.com 获取。",
+                 bg=CARD, fg="#a6adc8", font=("Microsoft YaHei UI", 9),
+                 wraplength=430, justify=tk.LEFT).pack(anchor=tk.W, pady=(2, 8))
+
+        apikey_row = tk.Frame(card1, bg=CARD)
+        apikey_row.pack(fill=tk.X)
+
+        apikey_var = tk.StringVar(value=cur_apikey)
+        apikey_entry = tk.Entry(
+            apikey_row, textvariable=apikey_var,
+            bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
+            font=MONO, relief=tk.FLAT, bd=4, show="*",
+            highlightthickness=1, highlightbackground="#585b70",
+            highlightcolor=ACCENT,
+        )
+        apikey_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        # 显示/隐藏切换
+        apikey_show_var = tk.BooleanVar(value=False)
+        def toggle_apikey_show():
+            apikey_entry.configure(show="" if apikey_show_var.get() else "*")
+        tk.Checkbutton(
+            apikey_row, text="显示", variable=apikey_show_var,
+            command=toggle_apikey_show,
+            bg=CARD, fg=FG, selectcolor=ENTRY_BG,
+            activebackground=CARD, activeforeground=FG,
+            font=("Microsoft YaHei UI", 9), bd=0
+        ).pack(side=tk.LEFT, padx=(8, 0))
+
+        # ──────────────────────────────────────────
+        # 卡片：B站 SESSDATA
+        # ──────────────────────────────────────────
+        card2 = tk.Frame(outer, bg=CARD, bd=0, relief=tk.FLAT, padx=14, pady=12)
+        card2.pack(fill=tk.X, pady=(0, 10))
+
+        tk.Label(card2, text="B站 SESSDATA", bg=CARD, fg=ACCENT,
+                 font=FONT_BOLD).pack(anchor=tk.W)
+        tk.Label(card2,
+                 text="用于获取 B站 AI 字幕（需要登录态）。\n"
+                      "获取方式：浏览器登录B站 → F12 → Application → Cookies → SESSDATA",
+                 bg=CARD, fg="#a6adc8", font=("Microsoft YaHei UI", 9),
+                 wraplength=430, justify=tk.LEFT).pack(anchor=tk.W, pady=(2, 8))
+
+        sessdata_row = tk.Frame(card2, bg=CARD)
+        sessdata_row.pack(fill=tk.X)
+
+        sessdata_var = tk.StringVar(value=cur_sessdata)
+        sessdata_entry = tk.Entry(
+            sessdata_row, textvariable=sessdata_var,
+            bg=ENTRY_BG, fg=ENTRY_FG, insertbackground=ENTRY_FG,
+            font=MONO, relief=tk.FLAT, bd=4, show="*",
+            highlightthickness=1, highlightbackground="#585b70",
+            highlightcolor=ACCENT,
+        )
+        sessdata_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+
+        sessdata_show_var = tk.BooleanVar(value=False)
+        def toggle_sessdata_show():
+            sessdata_entry.configure(show="" if sessdata_show_var.get() else "*")
+        tk.Checkbutton(
+            sessdata_row, text="显示", variable=sessdata_show_var,
+            command=toggle_sessdata_show,
+            bg=CARD, fg=FG, selectcolor=ENTRY_BG,
+            activebackground=CARD, activeforeground=FG,
+            font=("Microsoft YaHei UI", 9), bd=0
+        ).pack(side=tk.LEFT, padx=(8, 0))
+
+        # ── 状态提示标签 ──
+        status_var = tk.StringVar(value="")
+        status_label = tk.Label(outer, textvariable=status_var, bg=BG,
+                                font=("Microsoft YaHei UI", 9))
+        status_label.pack(anchor=tk.W, pady=(0, 4))
+
+        # ── 按钮行 ──
+        btn_row = tk.Frame(outer, bg=BG)
+        btn_row.pack(fill=tk.X)
+
+        def on_save():
+            new_apikey = apikey_var.get().strip()
+            new_sessdata = sessdata_var.get().strip()
+            try:
+                self._save_config(new_apikey, new_sessdata)
+                status_var.set("✅ 已保存到 config.yaml")
+                status_label.configure(fg="#a6e3a1")
+                self._append_log("设置已保存（API Key 和 SESSDATA 已更新）")
+            except Exception as e:
+                status_var.set(f"❌ 保存失败: {e}")
+                status_label.configure(fg="#f38ba8")
+
+        def on_cancel():
+            dlg.destroy()
+
+        save_btn = tk.Button(
+            btn_row, text="保存", command=on_save,
+            bg=ACCENT, fg="#1e1e2e", activebackground="#7aa2f7",
+            activeforeground="#1e1e2e", font=FONT_BOLD,
+            relief=tk.FLAT, bd=0, padx=20, pady=6, cursor="hand2"
+        )
+        save_btn.pack(side=tk.RIGHT, padx=(8, 0))
+
+        tk.Button(
+            btn_row, text="关闭", command=on_cancel,
+            bg="#45475a", fg=FG, activebackground="#585b70",
+            activeforeground=FG, font=FONT,
+            relief=tk.FLAT, bd=0, padx=20, pady=6, cursor="hand2"
+        ).pack(side=tk.RIGHT)
+
+        # 窗口居中
+        dlg.update_idletasks()
+        dw, dh = dlg.winfo_width(), dlg.winfo_height()
+        px = self.root.winfo_x() + (self.root.winfo_width() - dw) // 2
+        py = self.root.winfo_y() + (self.root.winfo_height() - dh) // 2
+        dlg.geometry(f"+{max(0, px)}+{max(0, py)}")
+        dlg.minsize(480, 0)
+
+    def _save_config(self, new_apikey: str, new_sessdata: str):
+        """将 API Key 和 SESSDATA 写入 config.yaml，保留其余配置"""
+        config_file = Path(self.config_path)
+
+        # 读取原始文件内容（保留注释和格式），用 yaml 解析
+        if config_file.exists():
+            with open(config_file, "r", encoding="utf-8") as f:
+                raw = f.read()
+            data = yaml.safe_load(raw) or {}
+        else:
+            raw = ""
+            data = {}
+
+        # 更新内存配置
+        data.setdefault("llm", {})
+        data.setdefault("download", {})
+        data["llm"]["api_key"] = new_apikey if new_apikey else None
+        data["download"]["sessdata"] = new_sessdata if new_sessdata else None
+
+        # 回写 YAML（用 ruamel.yaml 保留注释；没有则用 pyyaml 重写）
+        try:
+            from ruamel.yaml import YAML
+            from io import StringIO
+            ryaml = YAML()
+            ryaml.preserve_quotes = True
+            ryaml.width = 4096
+            doc = ryaml.load(raw) if raw else {}
+            doc.setdefault("llm", {})
+            doc.setdefault("download", {})
+            doc["llm"]["api_key"] = new_apikey if new_apikey else None
+            doc["download"]["sessdata"] = new_sessdata if new_sessdata else None
+            buf = StringIO()
+            ryaml.dump(doc, buf)
+            out = buf.getvalue()
+        except ImportError:
+            # ruamel.yaml 未安装，退而用 pyyaml（会丢失注释，但功能正常）
+            out = yaml.dump(data, allow_unicode=True, default_flow_style=False,
+                            sort_keys=False)
+
+        with open(config_file, "w", encoding="utf-8") as f:
+            f.write(out)
+
+        # 同步更新内存配置，后续处理立即生效
+        self.config = data
 
     def _open_result_file(self):
         """打开结果文件"""
